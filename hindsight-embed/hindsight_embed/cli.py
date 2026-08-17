@@ -246,7 +246,7 @@ def _do_configure_from_env():
 
     from .env_template import render_config
 
-    CONFIG_FILE.write_text(render_config(config_values))
+    CONFIG_FILE.write_text(render_config(config_values), encoding="utf-8")
     CONFIG_FILE.chmod(0o600)
 
     print()
@@ -432,7 +432,7 @@ def _do_configure_interactive(profile_name: str | None = None, port: int | None 
         # Save to default profile
         from .env_template import render_config
 
-        CONFIG_FILE.write_text(render_config(config_dict))
+        CONFIG_FILE.write_text(render_config(config_dict), encoding="utf-8")
         CONFIG_FILE.chmod(0o600)
 
     # Stop existing daemon if running (it needs to pick up new config)
@@ -1205,7 +1205,7 @@ def do_profile_command(args: list[str]) -> int:
                 config_path = CONFIG_FILE
 
             if config_path.exists():
-                for line in config_path.read_text().splitlines():
+                for line in config_path.read_text(encoding="utf-8").splitlines():
                     line = line.strip()
                     if line and not line.startswith("#") and "=" in line:
                         k, v = line.split("=", 1)
@@ -1257,7 +1257,7 @@ def do_profile_command(args: list[str]) -> int:
         # Parse existing config
         config = {}
         if config_path.exists():
-            for line in config_path.read_text().splitlines():
+            for line in config_path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
@@ -1302,7 +1302,7 @@ def do_profile_command(args: list[str]) -> int:
         # Parse existing config
         config = {}
         if config_path.exists():
-            for line in config_path.read_text().splitlines():
+            for line in config_path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)

@@ -127,10 +127,13 @@ npx @vectorize-io/hindsight-coding-agents install dsh
 ```
 
 A Cordis plugin row in `$DSH_HOME/cordis.patch.yml` (`~/.dsh` by default), which every dsh profile
-composes — native tools, no MCP needed. Two dsh-specific notes: one dsh process serves **several
+composes — native tools, no MCP needed. Three dsh-specific notes: one dsh process serves **several
 repositories** (its Web UI opens each session in whatever directory you pick), so the bank is
-resolved per session workspace rather than once per process; and dsh has no plugin-facing notice
-channel, so the seed line goes to the plugin log rather than the UI. Everything model-facing —
+resolved per session workspace rather than once per process; dsh has no plugin-facing notice
+channel, so the seed line goes to the plugin log rather than the UI; and in daemon mode the local
+`hindsight-embed` is warmed up at session start exactly like the hook harnesses do (adopt-if-healthy,
+detached, non-blocking — see the SessionStart hook), so no manual `daemon-start.js` step is needed
+and a daemon that idled out is restarted by the next session. Everything model-facing —
 recalled memory, the knowledge preamble, the `hindsight_*` tools — is unaffected. If you prefer the
 published-package route, `dsh plugin --profile web add @vectorize-io/hindsight-coding-agents` works
 too: the package ships the profile patch layer, so nothing else needs editing.

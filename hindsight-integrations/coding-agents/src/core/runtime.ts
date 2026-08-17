@@ -14,6 +14,7 @@
  * No opencode/claude specifics live here — only the memory logic.
  */
 import type { Config } from "./config";
+import { ensureDaemon } from "./daemon";
 import { diag } from "./diag";
 import { describeError, log, setLogLevel } from "./log";
 import type { HindsightClient } from "./hindsight";
@@ -100,6 +101,15 @@ export class RuntimeCore {
     // HINDSIGHT_DISABLE_HOOKS=1 — the tools stay registered (toolSpecs, so the survey can ingest),
     // but seeding/recall/write-back must no-op or the survey would re-seed itself (see core/survey.ts).
     if (process.env.HINDSIGHT_DISABLE_HOOKS) return;
+    // Daemon mode: warm the local daemon up detached before the user has typed anything.
+    // Persistent-plugin hosts (dsh, opencode, Kilo, Cline, Prime Agent) have no hook to hang
+    // this on, so this SessionStart-equivalent is where the hook harnesses' SessionStart does it
+    // (ensureDaemon). waitMs: 0 keeps it fire-and-forget: a healthy daemon is adopted via the
+    // health check, a cold one keeps coming up in the background and is picked up by a later
+    // turn — the host's UI must not wait on a cold start (see core/daemon.ts).
+    if (this.cfg.serverMode === "daemon") {
+      await ensureDaemon(this.cfg, this.harness, { waitMs: 0 });
+    }
     try {
       const out = await buildSessionStartContext({
         cwd: repoPath || process.cwd(),

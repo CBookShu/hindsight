@@ -1,7 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveConfig } from "./config";
 import type { HindsightClient } from "./hindsight";
 import { RuntimeCore } from "./runtime";
+
+// The persistent-plugin path owns daemon warm-up in seedIfCold (parity with the hook harnesses'
+// SessionStart ensureDaemon). Mock only ensureDaemon — keep every other export real — so the
+// session-idle write-back tests below exercise the true module graph.
+vi.mock("./daemon", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./daemon")>();
+  return { ...actual, ensureDaemon: vi.fn(async () => undefined) };
+});
+import { ensureDaemon } from "./daemon";
 
 describe("RuntimeCore", () => {
   it("uses the shared prompt lifecycle and consumes the new-bank reflect deferral once", async () => {
@@ -19,6 +28,46 @@ describe("RuntimeCore", () => {
     await runtime.onPrompt("runtime-shared-lifecycle", "second prompt");
     expect(client.reflect).toHaveBeenCalledTimes(1);
     expect(runtime.getInjection("runtime-shared-lifecycle")).toContain("shared reflect");
+  });
+});
+
+describe("RuntimeCore daemon warm-up", () => {
+  const client = {
+    listDocumentIds: vi.fn(async () => new Set(["git:existing"])),
+    listPages: vi.fn(async () => ({ items: [] })),
+    reflect: vi.fn(async () => "shared reflect"),
+  } as unknown as HindsightClient;
+
+  beforeEach(() => {
+    vi.mocked(ensureDaemon).mockClear();
+    delete process.env.HINDSIGHT_DISABLE_HOOKS;
+  });
+
+  // The HINDSIGHT_DISABLE_HOOKS test below sets this; leaving it set would leak into the
+  // session-idle tests that follow (onTranscript/onSessionIdle short-circuit on it).
+  afterEach(() => {
+    delete process.env.HINDSIGHT_DISABLE_HOOKS;
+  });
+
+  it("warms the daemon at seedIfCold in daemon mode — the SessionStart parity hook harnesses have", async () => {
+    const cfg = resolveConfig({ serverMode: "daemon" });
+    const runtime = new RuntimeCore(client, "bank-1", cfg);
+    await runtime.seedIfCold("/some/repo");
+    expect(ensureDaemon).toHaveBeenCalledTimes(1);
+    expect(ensureDaemon).toHaveBeenCalledWith(cfg, "opencode", { waitMs: 0 });
+  });
+
+  it("does not touch the daemon outside daemon mode", async () => {
+    const runtime = new RuntimeCore(client, "bank-1", resolveConfig({ serverMode: "self-hosted" }));
+    await runtime.seedIfCold("/some/repo");
+    expect(ensureDaemon).not.toHaveBeenCalled();
+  });
+
+  it("skips the warm-up under HINDSIGHT_DISABLE_HOOKS (anti-recursion for headless survey sessions)", async () => {
+    process.env.HINDSIGHT_DISABLE_HOOKS = "1";
+    const runtime = new RuntimeCore(client, "bank-1", resolveConfig({ serverMode: "daemon" }));
+    await runtime.seedIfCold("/some/repo");
+    expect(ensureDaemon).not.toHaveBeenCalled();
   });
 });
 

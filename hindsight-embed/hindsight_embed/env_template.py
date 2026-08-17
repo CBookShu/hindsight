@@ -21,11 +21,14 @@ def load_template() -> str | None:
     """
     bundled = importlib.resources.files("hindsight_embed").joinpath("env.example")
     if bundled.is_file():
-        return bundled.read_text()
+        # The bundled template is UTF-8; read it as such. Without the explicit
+        # encoding, a zh-CN Windows default (GBK/cp936) decode crashes profile
+        # creation with "'gbk' codec can't decode byte ..." (issue #3524).
+        return bundled.read_text(encoding="utf-8")
     for parent in Path(__file__).resolve().parents:
         candidate = parent / ".env.example"
         if candidate.is_file():
-            return candidate.read_text()
+            return candidate.read_text(encoding="utf-8")
     return None
 
 
