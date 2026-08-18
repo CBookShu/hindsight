@@ -141,6 +141,13 @@ export class RuntimeCore {
   async onPrompt(sessionId: string | undefined, prompt: string): Promise<void> {
     if (process.env.HINDSIGHT_DISABLE_HOOKS) return; // anti-recursion (see seedIfCold)
     if (!sessionId || !prompt.trim()) return;
+    // Daemon mode: re-warm per turn (adopt-if-healthy, non-blocking). seedIfCold warms once per
+    // workspace, but the daemon retires itself after daemonIdleTimeout, so a long-lived host
+    // would silently lose memory after a pause; the cheap localhost health check (connection
+    // refused returns immediately) keeps the loop closed without stalling the turn.
+    if (this.cfg.serverMode === "daemon") {
+      await ensureDaemon(this.cfg, this.harness, { waitMs: 0 });
+    }
     const turns = (this.turnCount.get(sessionId) ?? 0) + 1;
     this.turnCount.set(sessionId, turns);
 

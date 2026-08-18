@@ -181,6 +181,9 @@ export function startDaemonDetached(
     const child = spawnFn("node", [starter, "--harness", harness], {
       detached: true,
       stdio: "ignore",
+      // On Windows, a spawned child whose parent has no console gets its own visible console
+      // window unless windowsHide is set — the daemon starter is headless, so keep it hidden.
+      windowsHide: true,
     });
     // spawn() failures often surface ASYNCHRONOUSLY as an 'error' event; unhandled, that would
     // crash the hook.

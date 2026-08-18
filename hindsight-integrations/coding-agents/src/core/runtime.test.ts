@@ -69,6 +69,20 @@ describe("RuntimeCore daemon warm-up", () => {
     await runtime.seedIfCold("/some/repo");
     expect(ensureDaemon).not.toHaveBeenCalled();
   });
+
+  it("re-warms per prompt in daemon mode — closes the idle-timeout gap within one host process", async () => {
+    const cfg = resolveConfig({ serverMode: "daemon" });
+    const runtime = new RuntimeCore(client, "bank-1", cfg);
+    await runtime.onPrompt("s1", "hello");
+    expect(ensureDaemon).toHaveBeenCalledTimes(1);
+    expect(ensureDaemon).toHaveBeenCalledWith(cfg, "opencode", { waitMs: 0 });
+  });
+
+  it("does not warm per prompt outside daemon mode", async () => {
+    const runtime = new RuntimeCore(client, "bank-1", resolveConfig({ serverMode: "self-hosted" }));
+    await runtime.onPrompt("s1", "hello");
+    expect(ensureDaemon).not.toHaveBeenCalled();
+  });
 });
 
 /**
