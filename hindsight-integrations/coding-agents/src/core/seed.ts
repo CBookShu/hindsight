@@ -42,6 +42,9 @@ export function startBackgroundSeed(
       {
         detached: true,
         stdio: "ignore",
+        // The deepen engine is headless; on Windows a detached console child without windowsHide
+        // flashes a visible terminal window at every session start (same pattern as daemon.ts).
+        windowsHide: true,
       }
     );
     // spawn() failures (ENOENT/EACCES/fd exhaustion/sandboxed environments) often arrive

@@ -333,6 +333,9 @@ export function startCodebaseSurvey(
         detached: true,
         stdio: "ignore",
         env: plan.env,
+        // Headless survey agent: on Windows a detached console child without windowsHide flashes
+        // a visible terminal window at session start.
+        windowsHide: true,
       });
       // spawn() failures (binary not found, EACCES, sandboxed environments) often arrive
       // ASYNCHRONOUSLY as an 'error' event on the child, not as a synchronous throw — an unhandled
